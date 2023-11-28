@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Zarządzanie Wydatkami</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.3/xlsx.full.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            position: relative;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        input, select, button {
+            margin-top: 5px;
+        }
+
+        button {
+            padding: 8px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        #historia {
+            margin-top: 20px;
+        }
+
+        #lista-wydatkow {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #lista-wydatkow li {
+            margin-bottom: 10px;
+        }
+
+        #usun-historie,
+        #odswiez-date,
+        #eksportuj-do-excel {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+
+        #odswiez-date {
+            right: calc(10px + 110px);
+        }
+
+        #eksportuj-do-excel {
+            right: calc(10px + 220px);
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Zarządzanie Wydatkami</h1>
+
+    <label for="platforma">Platforma sprzedażowa:</label>
+    <select id="platforma">
+        <option value="Allegro">Allegro</option>
+        <option value="OLX">OLX</option>
+        <option value="Vinted">Vinted</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Inna">Inna</option>
+    </select>
+
+    <label for="produkt">Produkt:</label>
+    <input type="text" id="produkt">
+
+    <label for="wydatek">Wydatek:</label>
+    <input type="number" id="wydatek">
+
+    <label for="zarobek">Zarobek:</label>
+    <input type="number" id="zarobek">
+
+    <label for="data">Data sprzedaży:</label>
+    <input type="date" id="data">
+
+    <button onclick="zapiszWydatek()">Zapisz</button>
+    <button id="odswiez-date" onclick="odswiezDate()">Odśwież datę</button>
+    <button id="eksportuj-do-excel" onclick="eksportujDoExcel()">Eksportuj do Excel</button>
+
+    <div id="historia">
+        <h2>Historia wydatków:</h2>
+        <ul id="lista-wydatkow"></ul>
+    </div>
+
+    <button id="usun-historie" onclick="usunHistorie()">Usuń historię</button>
+
+    <script>
+        function zapiszWydatek() {
+            const platforma = document.getElementById("platforma").value;
+            const produkt = document.getElementById("produkt").value;
+            const wydatek = parseFloat(document.getElementById("wydatek").value);
+            const zarobek = parseFloat(document.getElementById("zarobek").value);
+            const data = document.getElementById("data").value;
+
+            if (isNaN(wydatek) || isNaN(zarobek)) {
+                alert("Wprowadź poprawne wartości dla wydatku i zarobku.");
+                return;
+            }
+
+            const naCzysto = zarobek - wydatek;
+
+            const historiaElement = document.getElementById("lista-wydatkow");
+            const nowyElement = document.createElement("li");
+            nowyElement.innerHTML = `<strong>${platforma} - ${produkt}</strong> - Wydatek: ${wydatek} zł, Zarobek: ${zarobek} zł, Na czysto: ${naCzysto} zł, Data: ${data}`;
+            historiaElement.appendChild(nowyElement);
+
+            // Zapis historii w pamięci przeglądarki (localStorage)
+            const historia = JSON.parse(localStorage.getItem('historia')) || [];
+            historia.push({
+                platforma: platforma,
+                produkt: produkt,
+                wydatek: wydatek,
+                zarobek: zarobek,
+                naCzysto: naCzysto,
+                data: data
+            });
+            localStorage.setItem('historia', JSON.stringify(historia));
+
+            // Wyczyszczenie pól po dodaniu wpisu
+            document.getElementById("platforma").value = "Allegro";
+            document.getElementById("produkt").value = "";
+            document.getElementById("wydatek").value = "";
+            document.getElementById("zarobek").value = "";
+            document.getElementById("data").value = getCurrentDate();
+        }
+
+        function usunHistorie() {
+            if (confirm("Czy na pewno chcesz usunąć historię wydatków?")) {
+                // Usunięcie historii z pamięci przeglądarki (localStorage)
+                localStorage.removeItem('historia');
+
+                // Usunięcie historii z widoku
+                const historiaElement = document.getElementById("lista-wydatkow");
+                while (historiaElement.firstChild) {
+                    historiaElement.removeChild(historiaElement.firstChild);
+                }
+            }
+        }
+
+        function odswiezDate() {
+            // Odśwież datę do dzisiejszej
+            document.getElementById("data").value = getCurrentDate();
+        }
+
+        function eksportujDoExcel() {
+            const historia = JSON.parse(localStorage.getItem('historia')) || [];
+            const wb = XLSX.utils.book_new();
+            const ws = XLSX.utils.json_to_sheet(historia);
+
+            XLSX.utils.book_append_sheet(wb, ws, 'Historia Wydatków');
+            XLSX.writeFile(wb, 'historia_wydatkow.xlsx');
+        }
+
+        function getCurrentDate() {
+            const today = new Date();
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            return `${today.getFullYear()}-${month}-${day}`;
+        }
+
+        // Załaduj historię z pamięci przeglądarki po wczytaniu strony
+        window.onload = function() {
+            const historia = JSON.parse(localStorage.getItem('historia')) || [];
+            const historiaElement = document.getElementById("lista-wydatkow");
+            historia.forEach(entry => {
+                const nowyElement = document.createElement("li");
+                nowyElement.innerHTML = `<strong>${entry.platforma} - ${entry.produkt}</strong> - Wydatek: ${entry.wydatek} zł, Zarobek: ${entry.zarobek} zł, Na czysto: ${entry.naCzysto} zł, Data: ${entry.data}`;
+                historiaElement.appendChild(nowyElement);
+            });
+        }
+    </script>
+</body>
+</html>
