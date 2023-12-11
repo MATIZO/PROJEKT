@@ -80,24 +80,43 @@
 
     <label for="platforma">Platforma sprzedażowa:</label>
     <select id="platforma">
+        <option value="Vinted">Vinted</option>
         <option value="Allegro">Allegro</option>
         <option value="OLX">OLX</option>
-        <option value="Vinted">Vinted</option>
         <option value="Facebook">Facebook</option>
         <option value="Inna">Inna</option>
     </select>
+    <label for="imie">Imię kupującego:</label>
+<input type="text" id="imie">
+
+<label for="nazwisko">Nazwisko kupującego:</label>
+<input type="text" id="nazwisko">
+
 
     <label for="produkt">Produkt:</label>
     <input type="text" id="produkt">
 
-    <label for="wydatek">Wydatek:</label>
+    <label for="opis">Opis produktu:</label>
+    <textarea id="opis"></textarea>
+
+
+    <label for="wydatek">Wydatek na produkt:</label>
     <input type="number" id="wydatek">
 
-    <label for="zarobek">Zarobek:</label>
+    <label for="zarobek">Zarobek z produktu:</label>
     <input type="number" id="zarobek">
 
     <label for="data">Data sprzedaży:</label>
     <input type="date" id="data">
+
+    <br></br>
+    <label for="Dodatkowekoszty">Dodatkowe koszty poniesione tego dnia</label>
+    <label for="sprzedajacy">Sprzedający:</label>
+    <input type="text" id="sprzedajacy">
+
+    <label for="koszt-uslugi">Koszt Usługi:</label>
+    <input type="number" id="koszt-uslugi">
+
 
     <button onclick="zapiszWydatek()">Zapisz</button>
     <button id="odswiez-date" onclick="odswiezDate()">Odśwież datę</button>
@@ -111,44 +130,60 @@
     <button id="usun-historie" onclick="usunHistorie()">Usuń historię</button>
 
     <script>
-        function zapiszWydatek() {
-            const platforma = document.getElementById("platforma").value;
-            const produkt = document.getElementById("produkt").value;
-            const wydatek = parseFloat(document.getElementById("wydatek").value);
-            const zarobek = parseFloat(document.getElementById("zarobek").value);
-            const data = document.getElementById("data").value;
+function zapiszWydatek() {
+    const platforma = document.getElementById("platforma").value;
+    const produkt = document.getElementById("produkt").value;
+    const imie = document.getElementById("imie").value;
+    const nazwisko = document.getElementById("nazwisko").value;
+    const opis = document.getElementById("opis").value;
+    const wydatek = parseFloat(document.getElementById("wydatek").value);
+    const zarobek = parseFloat(document.getElementById("zarobek").value);
+    const naCzysto = zarobek - wydatek;
+    const data = document.getElementById("data").value;
 
-            if (isNaN(wydatek) || isNaN(zarobek)) {
-                alert("Wprowadź poprawne wartości dla wydatku i zarobku.");
-                return;
-            }
+    const sprzedajacy = document.getElementById("sprzedajacy").value;
+    const kosztUslugi = parseFloat(document.getElementById("koszt-uslugi").value) || 0;
 
-            const naCzysto = zarobek - wydatek;
+    if (isNaN(wydatek) || isNaN(zarobek) || isNaN(kosztUslugi)) {
+        alert("Wprowadź poprawne wartości dla wydatku, zarobku i kosztu usługi.");
+        return;
+    }
 
-            const historiaElement = document.getElementById("lista-wydatkow");
-            const nowyElement = document.createElement("li");
-            nowyElement.innerHTML = `<strong>${platforma} - ${produkt}</strong> - Wydatek: ${wydatek} zł, Zarobek: ${zarobek} zł, Na czysto: ${naCzysto} zł, Data: ${data}`;
-            historiaElement.appendChild(nowyElement);
+    const historiaElement = document.getElementById("lista-wydatkow");
+    const nowyElement = document.createElement("li");
 
-            // Zapis historii w pamięci przeglądarki (localStorage)
-            const historia = JSON.parse(localStorage.getItem('historia')) || [];
-            historia.push({
-                platforma: platforma,
-                produkt: produkt,
-                wydatek: wydatek,
-                zarobek: zarobek,
-                naCzysto: naCzysto,
-                data: data
-            });
-            localStorage.setItem('historia', JSON.stringify(historia));
+    nowyElement.innerHTML = `<strong>${platforma} - ${produkt}</strong> - Kupujący: ${imie} ${nazwisko} - Opis: ${opis} - Wydatek: ${wydatek} zł, Zarobek: ${zarobek} zł, Na czysto: ${naCzysto} zł, Data: ${data} - Sprzedający: ${sprzedajacy}, Koszt Usługi: ${kosztUslugi} zł`;
+    historiaElement.appendChild(nowyElement);
 
-            // Wyczyszczenie pól po dodaniu wpisu
-            document.getElementById("platforma").value = "Allegro";
-            document.getElementById("produkt").value = "";
-            document.getElementById("wydatek").value = "";
-            document.getElementById("zarobek").value = "";
-            document.getElementById("data").value = getCurrentDate();
-        }
+    const historia = JSON.parse(localStorage.getItem('historia')) || [];
+    historia.push({
+        platforma: platforma,
+        produkt: produkt,
+        imie: imie,
+        nazwisko: nazwisko,
+        opis: opis,
+        wydatek: wydatek,
+        zarobek: zarobek,
+        naCzysto: naCzysto,
+        data: data,
+        sprzedajacy: sprzedajacy,
+        kosztUslugi: kosztUslugi
+    });
+    localStorage.setItem('historia', JSON.stringify(historia));
+
+    document.getElementById("platforma").value = "Allegro";
+    document.getElementById("produkt").value = "";
+    document.getElementById("imie").value = "";
+    document.getElementById("nazwisko").value = "";
+    document.getElementById("opis").value = "";
+    document.getElementById("wydatek").value = "";
+    document.getElementById("zarobek").value = "";
+    document.getElementById("data").value = getCurrentDate();
+    document.getElementById("sprzedajacy").value = "";
+    document.getElementById("koszt-uslugi").value = "";
+}
+
+
 
         function usunHistorie() {
             if (confirm("Czy na pewno chcesz usunąć historię wydatków?")) {
@@ -167,15 +202,18 @@
             // Odśwież datę do dzisiejszej
             document.getElementById("data").value = getCurrentDate();
         }
-
         function eksportujDoExcel() {
-            const historia = JSON.parse(localStorage.getItem('historia')) || [];
-            const wb = XLSX.utils.book_new();
-            const ws = XLSX.utils.json_to_sheet(historia);
+    const historia = JSON.parse(localStorage.getItem('historia')) || [];
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(historia, {
+    });
 
-            XLSX.utils.book_append_sheet(wb, ws, 'Historia Wydatków');
-            XLSX.writeFile(wb, 'historia_wydatkow.xlsx');
-        }
+    XLSX.utils.book_append_sheet(wb, ws, 'Historia Wydatków');
+    XLSX.writeFile(wb, 'historia_wydatkow.xlsx');
+}
+
+
+
 
         function getCurrentDate() {
             const today = new Date();
